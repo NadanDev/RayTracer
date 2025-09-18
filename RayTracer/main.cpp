@@ -18,7 +18,7 @@ int main()
 			auto g = double(j) / (imageHeight - 1);
 			auto b = 0.0;
 
-			int ir = int(255.999 * r);
+			int ir = int(255.999 * r); // Avoid truncation errors
 			int ig = int(255.999 * g);
 			int ib = int(255.999 * b);
 
