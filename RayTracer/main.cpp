@@ -1,4 +1,7 @@
 #include <iostream>
+#include <vector>
+#include <chrono>
+#include <SDL.h>
 
 #include "vec3.h"
 #include "ray.h"
@@ -13,7 +16,7 @@ colour rayColour(const ray& r)
 	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0); // Lerp
 }
 
-int main()
+int main(int argc, char* argv[])
 {
 	auto aspectRatio = 16.0 / 9.0;
 	int imageWidth = 400;
@@ -41,22 +44,67 @@ int main()
 	auto pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
 
 
-	// Render
-	cout << "P3\n" << imageWidth << ' ' << imageHeight << "\n255\n";
-
-	for (int j = 0; j < imageHeight; j++)
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
-		clog << "\rScanlines remaining: " << (imageHeight - j) << '\n';
-		for (int i = 0; i < imageWidth; i++)
-		{
-			auto pixelCenter = pixel00Loc + (i * pixelDeltaU) + (j * pixelDeltaV);
-			auto rayDirection = pixelCenter - cameraCenter;
-			ray r(cameraCenter, rayDirection);
+		cerr << "Could not initialize SDL: " << SDL_GetError() << "\n";
+		return 1;
+	}
 
-			colour pixelColour = rayColour(r);
-			writeColour(cout, pixelColour);
+	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, imageWidth, imageHeight, SDL_WINDOW_SHOWN);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, imageWidth, imageHeight);
+
+	// Render
+	vector<unsigned char> pixels(imageWidth * imageHeight * 3);
+
+	SDL_Event event;
+	bool quit = false;
+	while (!quit)
+	{
+		auto start = chrono::high_resolution_clock::now();
+
+		for (int j = 0; j < imageHeight; j++)
+		{
+			for (int i = 0; i < imageWidth; i++)
+			{
+				int offset = (j * imageWidth + i) * 3;
+
+				auto pixelCenter = pixel00Loc + (i * pixelDeltaU) + (j * pixelDeltaV);
+				auto rayDirection = pixelCenter - cameraCenter;
+				ray r(cameraCenter, rayDirection);
+
+				colour pixelColour = rayColour(r);
+
+				pixels[offset] = int(255.999 * pixelColour.x());
+				pixels[offset + 1] = int(255.999 * pixelColour.y());
+				pixels[offset + 2] = int(255.999 * pixelColour.z());
+			}
+		}
+
+		SDL_UpdateTexture(texture, nullptr, pixels.data(), imageWidth * 3);
+
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+		SDL_RenderPresent(renderer);
+
+		auto end = chrono::high_resolution_clock::now();
+		chrono::duration<double> timeElapsed = end - start;
+		double fps = 1 / timeElapsed.count();
+		cout << fps << "\n";
+
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_QUIT)
+			{
+				quit = true;
+			}
 		}
 	}
 
-	clog << "Done.\n";
+	SDL_DestroyTexture(texture);
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_Quit();
+
+	return 0;
 }
