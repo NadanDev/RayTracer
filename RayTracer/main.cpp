@@ -9,21 +9,31 @@
 
 using namespace std;
 
-bool hit_sphere(const point3& center, double radius, const ray& r)
+double hit_sphere(const point3& center, double radius, const ray& r)
 {
 	vec3 oc = center - r.origin();
 	auto a = dot(r.direction(), r.direction());
 	auto b = -2.0 * dot(r.direction(), oc);
 	auto c = dot(oc, oc) - radius * radius;
 	auto discriminant = b * b - 4 * a * c;
-	return (discriminant >= 0);
+
+	if (discriminant < 0)
+	{
+		return -1.0;
+	}
+	else
+	{
+		return (-b - sqrt(discriminant)) / (2.0 * a);
+	}
 }
 
 colour rayColour(const ray& r)
 {
-	if (hit_sphere(point3(0, 0, -1), 0.5, r))
+	auto t = hit_sphere(point3(0, 0, -1), 0.5, r);
+	if (t > 0.0)
 	{
-		return colour(1, 0, 0);
+		vec3 N = unitVector(r.at(t) - vec3(0, 0, -1));
+		return 0.5 * colour(N.x() + 1, N.y() + 1, N.z() + 1);
 	}
 
 	vec3 unitDirection = unitVector(r.direction());
@@ -111,7 +121,7 @@ int main(int argc, char* argv[])
 		auto end = chrono::high_resolution_clock::now();
 		chrono::duration<double> timeElapsed = end - start;
 		double fps = 1 / timeElapsed.count();
-		cout << fps << "\n";
+		//cout << fps << "\n";
 
 
 		const Uint8* state = SDL_GetKeyboardState(nullptr);
@@ -134,23 +144,28 @@ int main(int argc, char* argv[])
 
 		if (state[SDL_SCANCODE_UP])
 		{
-			cameraVerticalRotation += 0.1;
+			cameraVerticalRotation -= 0.1;
 		}
 		if (state[SDL_SCANCODE_LEFT])
 		{
-			cameraHorizontalRotation -= 0.1;
+			cameraHorizontalRotation += 0.1;
 		}
 		if (state[SDL_SCANCODE_DOWN])
 		{
-			cameraVerticalRotation -= 0.1;
+			cameraVerticalRotation += 0.1;
 		}
 		if (state[SDL_SCANCODE_RIGHT])
 		{
-			cameraHorizontalRotation += 0.1;
+			cameraHorizontalRotation -= 0.1;
 		}
 		viewportXPos = sin(cameraHorizontalRotation) * focalLength;
 		viewportYPos = sin(cameraVerticalRotation) * focalLength;
-		viewportZPos = ((cos(cameraVerticalRotation) * focalLength) + (cos(cameraHorizontalRotation) * focalLength)) / 2;
+		//viewportZPos = ((cos(cameraVerticalRotation) * focalLength) * (cos(cameraHorizontalRotation) * focalLength));
+		viewportZPos = ((cos(cameraHorizontalRotation) * focalLength));
+
+		cout << "X: " << viewportXPos << "\n";
+		cout << "Y: " << viewportYPos << "\n";
+		cout << "Z: " << viewportZPos << "\n";
 
 		viewportUpperLeft = cameraCenter - vec3(viewportXPos, viewportYPos, viewportZPos) - viewportU / 2 - viewportV / 2;
 		pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
