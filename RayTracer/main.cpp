@@ -55,8 +55,14 @@ int main(int argc, char* argv[])
 	auto pixelDeltaV = viewportV / imageHeight;
 
 	// Upper left pixel
-	auto viewportUpperLeft = cameraCenter - vec3(0, 0, focalLength) - viewportU / 2 - viewportV / 2;
+	double viewportXPos = 0;
+	double viewportYPos = 0;
+	double viewportZPos = focalLength;
+	auto viewportUpperLeft = cameraCenter - vec3(viewportXPos, viewportYPos, viewportZPos) - viewportU / 2 - viewportV / 2;
 	auto pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
+
+	double cameraHorizontalRotation = 0;
+	double cameraVerticalRotation = 0;
 
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -106,6 +112,49 @@ int main(int argc, char* argv[])
 		chrono::duration<double> timeElapsed = end - start;
 		double fps = 1 / timeElapsed.count();
 		cout << fps << "\n";
+
+
+		const Uint8* state = SDL_GetKeyboardState(nullptr);
+		if (state[SDL_SCANCODE_W])
+		{
+			cameraCenter += point3(0, 0, -0.1);
+		}
+		if (state[SDL_SCANCODE_A])
+		{
+			cameraCenter += point3(-0.1, 0, 0);
+		}
+		if (state[SDL_SCANCODE_S])
+		{
+			cameraCenter += point3(0, 0, 0.1);
+		}
+		if (state[SDL_SCANCODE_D])
+		{
+			cameraCenter += point3(0.1, 0, 0);
+		}
+
+		if (state[SDL_SCANCODE_UP])
+		{
+			cameraVerticalRotation += 0.1;
+		}
+		if (state[SDL_SCANCODE_LEFT])
+		{
+			cameraHorizontalRotation -= 0.1;
+		}
+		if (state[SDL_SCANCODE_DOWN])
+		{
+			cameraVerticalRotation -= 0.1;
+		}
+		if (state[SDL_SCANCODE_RIGHT])
+		{
+			cameraHorizontalRotation += 0.1;
+		}
+		viewportXPos = sin(cameraHorizontalRotation) * focalLength;
+		viewportYPos = sin(cameraVerticalRotation) * focalLength;
+		viewportZPos = ((cos(cameraVerticalRotation) * focalLength) + (cos(cameraHorizontalRotation) * focalLength)) / 2;
+
+		viewportUpperLeft = cameraCenter - vec3(viewportXPos, viewportYPos, viewportZPos) - viewportU / 2 - viewportV / 2;
+		pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
+
 
 		while (SDL_PollEvent(&event))
 		{
