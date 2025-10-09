@@ -9,6 +9,54 @@
 
 using namespace std;
 
+
+struct Camera 
+{
+	// Camera Settings
+	point3 cameraCenter;
+	double focalLength;
+	double viewportHeight;
+	double viewportWidth;
+	// Live rotation of camera
+	double cameraHorizontalRotation;
+	double cameraVerticalRotation;
+
+	// Camera Look Direction and Vectors
+	vec3 cameraDir;
+	vec3 cameraRight;
+	vec3 cameraUp;
+	vec3 viewportCenter;
+	// Viewport scale in world
+	vec3 viewportU;
+	vec3 viewportV;
+	// Pixel positions
+	vec3 viewportUpperLeft;
+	vec3 pixelDeltaU;
+	vec3 pixelDeltaV;
+	vec3 pixel00Loc;
+
+	void updateViewport(int imageWidth, int imageHeight) 
+	{
+		cameraDir = -unitVector(vec3(sin(cameraHorizontalRotation) * cos(cameraVerticalRotation), sin(cameraVerticalRotation), cos(cameraHorizontalRotation) * cos(cameraVerticalRotation)));
+
+		cameraRight = unitVector(cross(cameraDir, vec3(0, 1, 0)));
+		cameraUp = cross(cameraRight, cameraDir);
+
+		viewportCenter = cameraCenter + focalLength * cameraDir;
+
+		viewportU = viewportWidth * cameraRight;
+		viewportV = -viewportHeight * cameraUp;
+
+		viewportUpperLeft = viewportCenter - viewportU / 2 - viewportV / 2;
+
+		pixelDeltaU = viewportU / imageWidth;
+		pixelDeltaV = viewportV / imageHeight;
+
+		pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV);
+	}
+};
+
+
 double hit_sphere(const point3& center, double radius, const ray& r)
 {
 	vec3 oc = center - r.origin();
@@ -41,6 +89,56 @@ colour rayColour(const ray& r)
 	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0); // Lerp
 }
 
+void inputHandler(Camera& cam)
+{
+	const Uint8* state = SDL_GetKeyboardState(nullptr);
+
+	// Movement
+	if (state[SDL_SCANCODE_W])
+	{
+		cam.cameraCenter += cam.cameraDir * 0.1;
+	}
+	if (state[SDL_SCANCODE_A])
+	{
+		cam.cameraCenter += cam.cameraRight * -0.1;
+	}
+	if (state[SDL_SCANCODE_S])
+	{
+		cam.cameraCenter += cam.cameraDir * -0.1;
+	}
+	if (state[SDL_SCANCODE_D])
+	{
+		cam.cameraCenter += cam.cameraRight * 0.1;
+	}
+	if (state[SDL_SCANCODE_SPACE])
+	{
+		cam.cameraCenter += vec3(0, 0.1, 0);
+	}
+	if (state[SDL_SCANCODE_LCTRL])
+	{
+		cam.cameraCenter += vec3(0, -0.1, 0);
+	}
+
+	// Rotation
+	if (state[SDL_SCANCODE_UP])
+	{
+		cam.cameraVerticalRotation -= 0.1;
+	}
+	if (state[SDL_SCANCODE_LEFT])
+	{
+		cam.cameraHorizontalRotation += 0.1;
+	}
+	if (state[SDL_SCANCODE_DOWN])
+	{
+		cam.cameraVerticalRotation += 0.1;
+	}
+	if (state[SDL_SCANCODE_RIGHT])
+	{
+		cam.cameraHorizontalRotation -= 0.1;
+	}
+}
+
+
 int main(int argc, char* argv[])
 {
 	auto aspectRatio = 16.0 / 9.0;
@@ -50,29 +148,15 @@ int main(int argc, char* argv[])
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
 
-	// Camera
-	auto focalLength = 1.0;
-	auto viewportHeight = 2.0;
-	auto viewportWidth = viewportHeight * (double(imageWidth) / imageHeight);
-	auto cameraCenter = point3(0, 0, 0);
-
-	// Vertical and Horizontal vectors
-	auto viewportU = vec3(viewportWidth, 0, 0);
-	auto viewportV = vec3(0, -viewportHeight, 0);
-
-	// Horizontal and vertical delta vectors from pixel to pixel
-	auto pixelDeltaU = viewportU / imageWidth;
-	auto pixelDeltaV = viewportV / imageHeight;
-
-	// Upper left pixel
-	double viewportXPos = 0;
-	double viewportYPos = 0;
-	double viewportZPos = focalLength;
-	auto viewportUpperLeft = cameraCenter - vec3(viewportXPos, viewportYPos, viewportZPos) - viewportU / 2 - viewportV / 2;
-	auto pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
-
-	double cameraHorizontalRotation = 0;
-	double cameraVerticalRotation = 0;
+	// Initial values
+	Camera cam;
+	cam.focalLength = 1.0;
+	cam.viewportHeight = 2.0;
+	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
+	cam.cameraCenter = point3(0, 0, 0);
+	cam.cameraHorizontalRotation = 0.0;
+	cam.cameraVerticalRotation = 0.0;
+	cam.updateViewport(imageWidth, imageHeight);
 
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -87,9 +171,9 @@ int main(int argc, char* argv[])
 
 	// Render
 	vector<unsigned char> pixels(imageWidth * imageHeight * 3);
-
 	SDL_Event event;
 	bool quit = false;
+
 	while (!quit)
 	{
 		auto start = chrono::high_resolution_clock::now();
@@ -100,9 +184,9 @@ int main(int argc, char* argv[])
 			{
 				int offset = (j * imageWidth + i) * 3;
 
-				auto pixelCenter = pixel00Loc + (i * pixelDeltaU) + (j * pixelDeltaV);
-				auto rayDirection = pixelCenter - cameraCenter;
-				ray r(cameraCenter, rayDirection);
+				auto pixelCenter = cam.pixel00Loc + (i * cam.pixelDeltaU) + (j * cam.pixelDeltaV);
+				auto rayDirection = pixelCenter - cam.cameraCenter;
+				ray r(cam.cameraCenter, rayDirection);
 
 				colour pixelColour = rayColour(r);
 
@@ -121,54 +205,11 @@ int main(int argc, char* argv[])
 		auto end = chrono::high_resolution_clock::now();
 		chrono::duration<double> timeElapsed = end - start;
 		double fps = 1 / timeElapsed.count();
-		//cout << fps << "\n";
+		cout << fps << "\n";
 
-
-		const Uint8* state = SDL_GetKeyboardState(nullptr);
-		if (state[SDL_SCANCODE_W])
-		{
-			cameraCenter += point3(0, 0, -0.1);
-		}
-		if (state[SDL_SCANCODE_A])
-		{
-			cameraCenter += point3(-0.1, 0, 0);
-		}
-		if (state[SDL_SCANCODE_S])
-		{
-			cameraCenter += point3(0, 0, 0.1);
-		}
-		if (state[SDL_SCANCODE_D])
-		{
-			cameraCenter += point3(0.1, 0, 0);
-		}
-
-		if (state[SDL_SCANCODE_UP])
-		{
-			cameraVerticalRotation -= 0.1;
-		}
-		if (state[SDL_SCANCODE_LEFT])
-		{
-			cameraHorizontalRotation += 0.1;
-		}
-		if (state[SDL_SCANCODE_DOWN])
-		{
-			cameraVerticalRotation += 0.1;
-		}
-		if (state[SDL_SCANCODE_RIGHT])
-		{
-			cameraHorizontalRotation -= 0.1;
-		}
-		viewportXPos = sin(cameraHorizontalRotation) * focalLength;
-		viewportYPos = sin(cameraVerticalRotation) * focalLength;
-		//viewportZPos = ((cos(cameraVerticalRotation) * focalLength) * (cos(cameraHorizontalRotation) * focalLength));
-		viewportZPos = ((cos(cameraHorizontalRotation) * focalLength));
-
-		cout << "X: " << viewportXPos << "\n";
-		cout << "Y: " << viewportYPos << "\n";
-		cout << "Z: " << viewportZPos << "\n";
-
-		viewportUpperLeft = cameraCenter - vec3(viewportXPos, viewportYPos, viewportZPos) - viewportU / 2 - viewportV / 2;
-		pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV); // Middle
+		// Player Input
+		inputHandler(cam);
+		cam.updateViewport(imageWidth, imageHeight);
 
 
 		while (SDL_PollEvent(&event))
