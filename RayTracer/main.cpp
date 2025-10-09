@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <chrono>
+#include <thread>
 #include <SDL.h>
 
 #include "vec3.h"
@@ -14,12 +15,12 @@ struct Camera
 {
 	// Camera Settings
 	point3 cameraCenter;
-	double focalLength;
-	double viewportHeight;
-	double viewportWidth;
+	double focalLength = 0;
+	double viewportHeight = 0;
+	double viewportWidth = 0;
 	// Live rotation of camera
-	double cameraHorizontalRotation;
-	double cameraVerticalRotation;
+	double cameraHorizontalRotation = 0;
+	double cameraVerticalRotation = 0;
 
 	// Camera Look Direction and Vectors
 	vec3 cameraDir;
@@ -138,6 +139,48 @@ void inputHandler(Camera& cam)
 	}
 }
 
+void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam)
+{
+	for (int j = startY; j < endY; ++j)
+	{
+		for (int i = 0; i < imageWidth; ++i)
+		{
+			int offset = (j * imageWidth + i) * 3;
+
+			auto pixelCenter = cam.pixel00Loc + (i * cam.pixelDeltaU) + (j * cam.pixelDeltaV);
+			auto rayDirection = pixelCenter - cam.cameraCenter;
+			ray r(cam.cameraCenter, rayDirection);
+
+			colour pixelColour = rayColour(r);
+
+			pixels[offset] = int(255.999 * pixelColour.x());
+			pixels[offset + 1] = int(255.999 * pixelColour.y());
+			pixels[offset + 2] = int(255.999 * pixelColour.z());
+		}
+	}
+}
+
+void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam)
+{
+	int numThreads = thread::hardware_concurrency();
+	int rowsPerThread = imageHeight / numThreads;
+	
+	vector<thread> threads;
+
+	for (int i = 0; i < numThreads; ++i)
+	{
+		int startY = i * rowsPerThread;
+		int endY = (i == numThreads - 1) ? imageHeight : startY + rowsPerThread;
+
+		threads.emplace_back(renderRows, startY, endY, imageWidth, imageHeight, ref(pixels), cref(cam));
+	}
+
+	for (auto& thread : threads)
+	{
+		thread.join();
+	}
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -178,23 +221,8 @@ int main(int argc, char* argv[])
 	{
 		auto start = chrono::high_resolution_clock::now();
 
-		for (int j = 0; j < imageHeight; j++)
-		{
-			for (int i = 0; i < imageWidth; i++)
-			{
-				int offset = (j * imageWidth + i) * 3;
-
-				auto pixelCenter = cam.pixel00Loc + (i * cam.pixelDeltaU) + (j * cam.pixelDeltaV);
-				auto rayDirection = pixelCenter - cam.cameraCenter;
-				ray r(cam.cameraCenter, rayDirection);
-
-				colour pixelColour = rayColour(r);
-
-				pixels[offset] = int(255.999 * pixelColour.x());
-				pixels[offset + 1] = int(255.999 * pixelColour.y());
-				pixels[offset + 2] = int(255.999 * pixelColour.z());
-			}
-		}
+		// RENDER FRAME
+		renderFrame(imageWidth, imageHeight, pixels, cam);
 
 		SDL_UpdateTexture(texture, nullptr, pixels.data(), imageWidth * 3);
 
