@@ -21,6 +21,9 @@ struct Camera
 	// Live rotation of camera
 	double cameraHorizontalRotation = 0;
 	double cameraVerticalRotation = 0;
+	// Prefs
+	double sensitivity = 0;
+	double moveSpeed = 0;
 
 	// Camera Look Direction and Vectors
 	vec3 cameraDir;
@@ -36,7 +39,7 @@ struct Camera
 	vec3 pixelDeltaV;
 	vec3 pixel00Loc;
 
-	void updateViewport(int imageWidth, int imageHeight) 
+	void updateViewport(const int imageWidth, const int imageHeight) 
 	{
 		cameraDir = -unitVector(vec3(sin(cameraHorizontalRotation) * cos(cameraVerticalRotation), sin(cameraVerticalRotation), cos(cameraHorizontalRotation) * cos(cameraVerticalRotation)));
 
@@ -90,52 +93,52 @@ colour rayColour(const ray& r)
 	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0); // Lerp
 }
 
-void inputHandler(Camera& cam)
+void inputHandler(Camera& cam, const double deltaTime, const double sensitivity, const double moveSpeed)
 {
 	const Uint8* state = SDL_GetKeyboardState(nullptr);
 
 	// Movement
 	if (state[SDL_SCANCODE_W])
 	{
-		cam.cameraCenter += cam.cameraDir * 0.1;
+		cam.cameraCenter += cam.cameraDir * moveSpeed * deltaTime;
 	}
 	if (state[SDL_SCANCODE_A])
 	{
-		cam.cameraCenter += cam.cameraRight * -0.1;
+		cam.cameraCenter += -cam.cameraRight * moveSpeed * deltaTime;
 	}
 	if (state[SDL_SCANCODE_S])
 	{
-		cam.cameraCenter += cam.cameraDir * -0.1;
+		cam.cameraCenter += -cam.cameraDir * moveSpeed * deltaTime;
 	}
 	if (state[SDL_SCANCODE_D])
 	{
-		cam.cameraCenter += cam.cameraRight * 0.1;
+		cam.cameraCenter += cam.cameraRight * moveSpeed * deltaTime;
 	}
 	if (state[SDL_SCANCODE_SPACE])
 	{
-		cam.cameraCenter += vec3(0, 0.1, 0);
+		cam.cameraCenter += vec3(0, moveSpeed * deltaTime, 0);
 	}
-	if (state[SDL_SCANCODE_LCTRL])
+	if (state[SDL_SCANCODE_LSHIFT])
 	{
-		cam.cameraCenter += vec3(0, -0.1, 0);
+		cam.cameraCenter += vec3(0, -moveSpeed * deltaTime, 0);
 	}
 
 	// Rotation
 	if (state[SDL_SCANCODE_UP])
 	{
-		cam.cameraVerticalRotation -= 0.1;
+		cam.cameraVerticalRotation -= sensitivity * deltaTime;
 	}
 	if (state[SDL_SCANCODE_LEFT])
 	{
-		cam.cameraHorizontalRotation += 0.1;
+		cam.cameraHorizontalRotation += sensitivity * deltaTime;
 	}
 	if (state[SDL_SCANCODE_DOWN])
 	{
-		cam.cameraVerticalRotation += 0.1;
+		cam.cameraVerticalRotation += sensitivity * deltaTime;
 	}
 	if (state[SDL_SCANCODE_RIGHT])
 	{
-		cam.cameraHorizontalRotation -= 0.1;
+		cam.cameraHorizontalRotation -= sensitivity * deltaTime;
 	}
 }
 
@@ -185,7 +188,7 @@ void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned ch
 int main(int argc, char* argv[])
 {
 	auto aspectRatio = 16.0 / 9.0;
-	int imageWidth = 400;
+	int imageWidth = 1000;
 
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
@@ -199,6 +202,8 @@ int main(int argc, char* argv[])
 	cam.cameraCenter = point3(0, 0, 0);
 	cam.cameraHorizontalRotation = 0.0;
 	cam.cameraVerticalRotation = 0.0;
+	cam.sensitivity = 3;
+	cam.moveSpeed = 3;
 	cam.updateViewport(imageWidth, imageHeight);
 
 
@@ -223,7 +228,6 @@ int main(int argc, char* argv[])
 
 		// RENDER FRAME
 		renderFrame(imageWidth, imageHeight, pixels, cam);
-
 		SDL_UpdateTexture(texture, nullptr, pixels.data(), imageWidth * 3);
 
 		SDL_RenderClear(renderer);
@@ -231,12 +235,12 @@ int main(int argc, char* argv[])
 		SDL_RenderPresent(renderer);
 
 		auto end = chrono::high_resolution_clock::now();
-		chrono::duration<double> timeElapsed = end - start;
-		double fps = 1 / timeElapsed.count();
+		double deltaTime = (chrono::duration<double>(end - start)).count();
+		double fps = 1 / deltaTime;
 		cout << fps << "\n";
 
 		// Player Input
-		inputHandler(cam);
+		inputHandler(cam, deltaTime, cam.sensitivity, cam.moveSpeed);
 		cam.updateViewport(imageWidth, imageHeight);
 
 
