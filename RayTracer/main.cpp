@@ -14,10 +14,12 @@ using namespace std;
 struct Camera 
 {
 	// Camera Settings
-	point3 cameraCenter;
-	double focalLength = 0;
+	point3 cameraCenter = point3(0, 0, 0);
+	double FOV = 0;
+	double focalLength = 1;
 	double viewportHeight = 0;
 	double viewportWidth = 0;
+
 	// Live rotation of camera
 	double cameraHorizontalRotation = 0;
 	double cameraVerticalRotation = 0;
@@ -187,25 +189,21 @@ void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned ch
 
 int main(int argc, char* argv[])
 {
+	// Image Settings
 	auto aspectRatio = 16.0 / 9.0;
 	int imageWidth = 1000;
-
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
 
-	// Initial values
 	Camera cam;
-	cam.focalLength = 1.0;
-	cam.viewportHeight = 2.0;
-	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
-	cam.cameraCenter = point3(0, 0, 0);
-	cam.cameraHorizontalRotation = 0.0;
-	cam.cameraVerticalRotation = 0.0;
+	// Initial values (Changeable)
+	cam.FOV = 45;
 	cam.sensitivity = 3;
 	cam.moveSpeed = 3;
-	cam.updateViewport(imageWidth, imageHeight);
-
+	// Calculations for intial values
+	cam.viewportHeight = tan((cam.FOV * M_PI / 180.0) / 2) * 2 * cam.focalLength;
+	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
@@ -237,7 +235,7 @@ int main(int argc, char* argv[])
 		auto end = chrono::high_resolution_clock::now();
 		double deltaTime = (chrono::duration<double>(end - start)).count();
 		double fps = 1 / deltaTime;
-		cout << fps << "\n";
+		//cout << fps << "\n";
 
 		// Player Input
 		inputHandler(cam, deltaTime, cam.sensitivity, cam.moveSpeed);
