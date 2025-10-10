@@ -98,6 +98,9 @@ colour rayColour(const ray& r)
 void inputHandler(Camera& cam, const double deltaTime, const double sensitivity, const double moveSpeed)
 {
 	const Uint8* state = SDL_GetKeyboardState(nullptr);
+	int x;
+	int y;
+	SDL_GetRelativeMouseState(&x, &y);
 
 	// Movement
 	if (state[SDL_SCANCODE_W])
@@ -126,21 +129,19 @@ void inputHandler(Camera& cam, const double deltaTime, const double sensitivity,
 	}
 
 	// Rotation
-	if (state[SDL_SCANCODE_UP])
+	cam.cameraHorizontalRotation -= x * sensitivity * deltaTime;
+	cam.cameraVerticalRotation += y * sensitivity * deltaTime;
+
+	if (state[SDL_SCANCODE_ESCAPE])
 	{
-		cam.cameraVerticalRotation -= sensitivity * deltaTime;
-	}
-	if (state[SDL_SCANCODE_LEFT])
-	{
-		cam.cameraHorizontalRotation += sensitivity * deltaTime;
-	}
-	if (state[SDL_SCANCODE_DOWN])
-	{
-		cam.cameraVerticalRotation += sensitivity * deltaTime;
-	}
-	if (state[SDL_SCANCODE_RIGHT])
-	{
-		cam.cameraHorizontalRotation -= sensitivity * deltaTime;
+		if (SDL_GetRelativeMouseMode() == SDL_TRUE)
+		{
+			SDL_SetRelativeMouseMode(SDL_FALSE);
+		}
+		else
+		{
+			SDL_SetRelativeMouseMode(SDL_TRUE);
+		}
 	}
 }
 
@@ -199,11 +200,12 @@ int main(int argc, char* argv[])
 	Camera cam;
 	// Initial values (Changeable)
 	cam.FOV = 45;
-	cam.sensitivity = 3;
+	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
 	// Calculations for intial values
 	cam.viewportHeight = tan((cam.FOV * M_PI / 180.0) / 2) * 2 * cam.focalLength;
 	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
+
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
@@ -214,6 +216,7 @@ int main(int argc, char* argv[])
 	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, imageWidth, imageHeight, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, imageWidth, imageHeight);
+	SDL_SetRelativeMouseMode(SDL_TRUE); // Enable mouse control
 
 	// Render
 	vector<unsigned char> pixels(imageWidth * imageHeight * 3);
@@ -232,10 +235,11 @@ int main(int argc, char* argv[])
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 
+		// FPS
 		auto end = chrono::high_resolution_clock::now();
 		double deltaTime = (chrono::duration<double>(end - start)).count();
 		double fps = 1 / deltaTime;
-		//cout << fps << "\n";
+		cout << fps << "\n";
 
 		// Player Input
 		inputHandler(cam, deltaTime, cam.sensitivity, cam.moveSpeed);
