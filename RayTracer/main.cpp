@@ -1,14 +1,13 @@
-#include <iostream>
+#include "rtweekend.h"
+
 #include <vector>
 #include <chrono>
 #include <thread>
 #include <SDL.h>
 
-#include "vec3.h"
-#include "ray.h"
-#include "colour.h"
-
-using namespace std;
+#include "hittable.h"
+#include "hittableList.h"
+#include "sphere.h"
 
 
 struct Camera 
@@ -63,36 +62,17 @@ struct Camera
 };
 
 
-double hit_sphere(const point3& center, double radius, const ray& r)
+colour rayColour(const ray& r, const hittable& world)
 {
-	vec3 oc = center - r.origin();
-	auto a = dot(r.direction(), r.direction());
-	auto b = -2.0 * dot(r.direction(), oc);
-	auto c = dot(oc, oc) - radius * radius;
-	auto discriminant = b * b - 4 * a * c;
-
-	if (discriminant < 0)
+	hitRecord rec;
+	if (world.hit(r, 0, infinity, rec))
 	{
-		return -1.0;
-	}
-	else
-	{
-		return (-b - sqrt(discriminant)) / (2.0 * a);
-	}
-}
-
-colour rayColour(const ray& r)
-{
-	auto t = hit_sphere(point3(0, 0, -1), 0.5, r);
-	if (t > 0.0)
-	{
-		vec3 N = unitVector(r.at(t) - vec3(0, 0, -1));
-		return 0.5 * colour(N.x() + 1, N.y() + 1, N.z() + 1);
+		return 0.5 * (rec.normal + colour(1, 1, 1));
 	}
 
 	vec3 unitDirection = unitVector(r.direction());
-	auto a = 0.5 * (unitDirection.y() + 1.0); // a must be between 0 and 1 instead of -1 to 1
-	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0); // Lerp
+	auto a = 0.5 * (unitDirection.y() + 1.0);
+	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0);
 }
 
 void inputHandler(Camera& cam, const double deltaTime, const double sensitivity, const double moveSpeed)
@@ -145,7 +125,7 @@ void inputHandler(Camera& cam, const double deltaTime, const double sensitivity,
 	}
 }
 
-void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam)
+void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
 {
 	for (int j = startY; j < endY; ++j)
 	{
@@ -157,7 +137,7 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 			auto rayDirection = pixelCenter - cam.cameraCenter;
 			ray r(cam.cameraCenter, rayDirection);
 
-			colour pixelColour = rayColour(r);
+			colour pixelColour = rayColour(r, world);
 
 			pixels[offset] = int(255.999 * pixelColour.x());
 			pixels[offset + 1] = int(255.999 * pixelColour.y());
@@ -166,7 +146,7 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 	}
 }
 
-void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam)
+void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
 {
 	int numThreads = thread::hardware_concurrency();
 	int rowsPerThread = imageHeight / numThreads;
@@ -178,7 +158,7 @@ void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned ch
 		int startY = i * rowsPerThread;
 		int endY = (i == numThreads - 1) ? imageHeight : startY + rowsPerThread;
 
-		threads.emplace_back(renderRows, startY, endY, imageWidth, imageHeight, ref(pixels), cref(cam));
+		threads.emplace_back(renderRows, startY, endY, imageWidth, imageHeight, ref(pixels), cref(cam), cref(world));
 	}
 
 	for (auto& thread : threads)
@@ -197,13 +177,19 @@ int main(int argc, char* argv[])
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
 
+	// World
+	hittableList world;
+
+	world.add(make_shared<sphere>(point3(0, 0, -1), 0.5));
+	world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));
+
 	Camera cam;
 	// Initial values (Changeable)
 	cam.FOV = 45;
 	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
 	// Calculations for intial values
-	cam.viewportHeight = tan((cam.FOV * M_PI / 180.0) / 2) * 2 * cam.focalLength;
+	cam.viewportHeight = tan(degreesToRadians(cam.FOV) / 2) * 2 * cam.focalLength;
 	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
 
 
@@ -228,7 +214,7 @@ int main(int argc, char* argv[])
 		auto start = chrono::high_resolution_clock::now();
 
 		// RENDER FRAME
-		renderFrame(imageWidth, imageHeight, pixels, cam);
+		renderFrame(imageWidth, imageHeight, pixels, cam, world);
 		SDL_UpdateTexture(texture, nullptr, pixels.data(), imageWidth * 3);
 
 		SDL_RenderClear(renderer);
