@@ -8,164 +8,8 @@
 #include "hittable.h"
 #include "hittableList.h"
 #include "sphere.h"
-
-
-struct Camera 
-{
-	// Camera Settings
-	point3 cameraCenter = point3(0, 0, 0);
-	double FOV = 0;
-	double focalLength = 1;
-	double viewportHeight = 0;
-	double viewportWidth = 0;
-
-	// Live rotation of camera
-	double cameraHorizontalRotation = 0;
-	double cameraVerticalRotation = 0;
-	// Prefs
-	double sensitivity = 0;
-	double moveSpeed = 0;
-
-	// Camera Look Direction and Vectors
-	vec3 cameraDir;
-	vec3 cameraRight;
-	vec3 cameraUp;
-	vec3 viewportCenter;
-	// Viewport scale in world
-	vec3 viewportU;
-	vec3 viewportV;
-	// Pixel positions
-	vec3 viewportUpperLeft;
-	vec3 pixelDeltaU;
-	vec3 pixelDeltaV;
-	vec3 pixel00Loc;
-
-	void updateViewport(const int imageWidth, const int imageHeight) 
-	{
-		cameraDir = -unitVector(vec3(sin(cameraHorizontalRotation) * cos(cameraVerticalRotation), sin(cameraVerticalRotation), cos(cameraHorizontalRotation) * cos(cameraVerticalRotation)));
-
-		cameraRight = unitVector(cross(cameraDir, vec3(0, 1, 0)));
-		cameraUp = cross(cameraRight, cameraDir);
-
-		viewportCenter = cameraCenter + focalLength * cameraDir;
-
-		viewportU = viewportWidth * cameraRight;
-		viewportV = -viewportHeight * cameraUp;
-
-		viewportUpperLeft = viewportCenter - viewportU / 2 - viewportV / 2;
-
-		pixelDeltaU = viewportU / imageWidth;
-		pixelDeltaV = viewportV / imageHeight;
-
-		pixel00Loc = viewportUpperLeft + 0.5 * (pixelDeltaU + pixelDeltaV);
-	}
-};
-
-
-colour rayColour(const ray& r, const hittable& world)
-{
-	hitRecord rec;
-	if (world.hit(r, 0, infinity, rec))
-	{
-		return 0.5 * (rec.normal + colour(1, 1, 1));
-	}
-
-	vec3 unitDirection = unitVector(r.direction());
-	auto a = 0.5 * (unitDirection.y() + 1.0);
-	return (1.0 - a) * colour(1.0, 1.0, 1.0) + a * colour(0.5, 0.7, 1.0);
-}
-
-void inputHandler(Camera& cam, const double deltaTime, const double sensitivity, const double moveSpeed)
-{
-	const Uint8* state = SDL_GetKeyboardState(nullptr);
-	int x;
-	int y;
-	SDL_GetRelativeMouseState(&x, &y);
-
-	// Movement
-	if (state[SDL_SCANCODE_W])
-	{
-		cam.cameraCenter += cam.cameraDir * moveSpeed * deltaTime;
-	}
-	if (state[SDL_SCANCODE_A])
-	{
-		cam.cameraCenter += -cam.cameraRight * moveSpeed * deltaTime;
-	}
-	if (state[SDL_SCANCODE_S])
-	{
-		cam.cameraCenter += -cam.cameraDir * moveSpeed * deltaTime;
-	}
-	if (state[SDL_SCANCODE_D])
-	{
-		cam.cameraCenter += cam.cameraRight * moveSpeed * deltaTime;
-	}
-	if (state[SDL_SCANCODE_SPACE])
-	{
-		cam.cameraCenter += vec3(0, moveSpeed * deltaTime, 0);
-	}
-	if (state[SDL_SCANCODE_LSHIFT])
-	{
-		cam.cameraCenter += vec3(0, -moveSpeed * deltaTime, 0);
-	}
-
-	// Rotation
-	cam.cameraHorizontalRotation -= x * sensitivity * deltaTime;
-	cam.cameraVerticalRotation += y * sensitivity * deltaTime;
-
-	if (state[SDL_SCANCODE_ESCAPE])
-	{
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE)
-		{
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-		}
-		else
-		{
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-		}
-	}
-}
-
-void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
-{
-	for (int j = startY; j < endY; ++j)
-	{
-		for (int i = 0; i < imageWidth; ++i)
-		{
-			int offset = (j * imageWidth + i) * 3;
-
-			auto pixelCenter = cam.pixel00Loc + (i * cam.pixelDeltaU) + (j * cam.pixelDeltaV);
-			auto rayDirection = pixelCenter - cam.cameraCenter;
-			ray r(cam.cameraCenter, rayDirection);
-
-			colour pixelColour = rayColour(r, world);
-
-			pixels[offset] = int(255.999 * pixelColour.x());
-			pixels[offset + 1] = int(255.999 * pixelColour.y());
-			pixels[offset + 2] = int(255.999 * pixelColour.z());
-		}
-	}
-}
-
-void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
-{
-	int numThreads = thread::hardware_concurrency();
-	int rowsPerThread = imageHeight / numThreads;
-	
-	vector<thread> threads;
-
-	for (int i = 0; i < numThreads; ++i)
-	{
-		int startY = i * rowsPerThread;
-		int endY = (i == numThreads - 1) ? imageHeight : startY + rowsPerThread;
-
-		threads.emplace_back(renderRows, startY, endY, imageWidth, imageHeight, ref(pixels), cref(cam), cref(world));
-	}
-
-	for (auto& thread : threads)
-	{
-		thread.join();
-	}
-}
+#include "camera.h"
+#include "input.h"
 
 
 int main(int argc, char* argv[])
@@ -188,6 +32,9 @@ int main(int argc, char* argv[])
 	cam.FOV = 45;
 	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
+	cam.enableAntialiasing = false;
+	cam.samplesPerPixel = 10;
+	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
 	// Calculations for intial values
 	cam.viewportHeight = tan(degreesToRadians(cam.FOV) / 2) * 2 * cam.focalLength;
 	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);

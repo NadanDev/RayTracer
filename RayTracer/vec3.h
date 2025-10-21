@@ -51,6 +51,7 @@ public:
 };
 
 using point3 = vec3;
+using colour = vec3;
 
 inline ostream& operator<<(ostream& out, const vec3& v)
 {
