@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
 	// Image Settings
 	auto aspectRatio = 16.0 / 9.0;
-	int imageWidth = 1000;
+	int imageWidth = 400;
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
@@ -32,9 +32,11 @@ int main(int argc, char* argv[])
 	cam.FOV = 45;
 	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
-	cam.enableAntialiasing = false;
-	cam.samplesPerPixel = 10;
+	cam.enableCameraLook = false;
+	cam.enableAntialiasing = true;
+	cam.samplesPerPixel = 100;
 	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
+	cam.maxDepth = 50;
 	// Calculations for intial values
 	cam.viewportHeight = tan(degreesToRadians(cam.FOV) / 2) * 2 * cam.focalLength;
 	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
@@ -46,7 +48,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, imageWidth, imageHeight, SDL_WINDOW_SHOWN);
+	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN); // 720p window (render resolution lower)
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, imageWidth, imageHeight);
 	SDL_SetRelativeMouseMode(SDL_TRUE); // Enable mouse control

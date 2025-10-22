@@ -48,6 +48,16 @@ public:
 	{
 		return e[0] * e[0] + e[1] * e[1] + e[2] * e[2];
 	}
+
+	static vec3 random()
+	{
+		return vec3(randomDouble(), randomDouble(), randomDouble());
+	}
+
+	static vec3 random(double min, double max)
+	{
+		return vec3(randomDouble(min, max), randomDouble(min, max), randomDouble(min, max));
+	}
 };
 
 using point3 = vec3;
@@ -101,4 +111,30 @@ inline vec3 cross(const vec3& u, const vec3& v)
 inline vec3 unitVector(const vec3& v)
 {
 	return v / v.length();
+}
+
+inline vec3 randomUnitVector()
+{
+	while (true)
+	{
+		auto p = vec3::random(-1, 1);
+		auto lensq = p.lengthSquared();
+		if (1e-160 < lensq && lensq <= 1)
+		{
+			return p / sqrt(lensq);
+		}
+	}
+}
+
+inline vec3 randomOnHemisphere(const vec3& normal)
+{
+	vec3 onUnitSphere = randomUnitVector();
+	if (dot(onUnitSphere, normal) > 0.0)
+	{
+		return onUnitSphere;
+	}
+	else
+	{
+		return -onUnitSphere;
+	}
 }

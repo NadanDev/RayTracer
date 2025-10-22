@@ -5,7 +5,7 @@ struct Camera
 	// Camera Settings
 	point3 cameraCenter = point3(0, 0, 0);
 	double FOV = 0;
-	double focalLength = 1;
+	const double focalLength = 1;
 	double viewportHeight = 0;
 	double viewportWidth = 0;
 
@@ -14,9 +14,13 @@ struct Camera
 	int samplesPerPixel = 0;
 	double pixelSamplesScale = 0;
 
+	// Bounces
+	int maxDepth = 0;
+
 	// Live rotation of camera
 	double cameraHorizontalRotation = 0;
 	double cameraVerticalRotation = 0;
+	bool enableCameraLook = false;
 	// Prefs
 	double sensitivity = 0;
 	double moveSpeed = 0;
@@ -57,12 +61,18 @@ struct Camera
 };
 
 
-colour rayColour(const ray& r, const hittable& world)
+colour rayColour(const ray& r, int depth, const hittable& world)
 {
-	hitRecord rec;
-	if (world.hit(r, interval(0, infinity), rec))
+	if (depth <= 0)
 	{
-		return 0.5 * (rec.normal + colour(1, 1, 1));
+		return colour(0, 0, 0);
+	}
+
+	hitRecord rec;
+	if (world.hit(r, interval(0.001, infinity), rec))
+	{
+		vec3 direction = randomOnHemisphere(rec.normal);
+		return 0.5 * rayColour(ray(rec.p, direction), depth - 1, world);
 	}
 
 	vec3 unitDirection = unitVector(r.direction());
@@ -103,7 +113,7 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 				for (int sample = 0; sample < cam.samplesPerPixel; sample++) 
 				{
 					ray r = getRay(i, j, cam);
-					pixelColour += rayColour(r, world);
+					pixelColour += rayColour(r, cam.maxDepth, world);
 				}
 
 				pixelColour = cam.pixelSamplesScale * pixelColour;
@@ -114,7 +124,7 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 				auto rayDirection = pixelCenter - cam.cameraCenter;
 				ray r(cam.cameraCenter, rayDirection);
 
-				pixelColour = rayColour(r, world);
+				pixelColour = rayColour(r, cam.maxDepth, world);
 			}
 
 			static const interval intensity(0.000, 0.999);

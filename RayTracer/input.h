@@ -34,18 +34,18 @@ void inputHandler(Camera& cam, const double deltaTime, const double sensitivity,
 	}
 
 	// Rotation
-	cam.cameraHorizontalRotation -= x * sensitivity * deltaTime;
-	cam.cameraVerticalRotation += y * sensitivity * deltaTime;
+	if (cam.enableCameraLook)
+	{
+		cam.cameraHorizontalRotation -= x * sensitivity * deltaTime;
+		cam.cameraVerticalRotation += y * sensitivity * deltaTime;
+	}
 
 	if (state[SDL_SCANCODE_ESCAPE])
 	{
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE)
-		{
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-		}
-		else
-		{
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-		}
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+	}
+	if (state[SDL_SCANCODE_DELETE])
+	{
+		SDL_SetRelativeMouseMode(SDL_TRUE);
 	}
 }
