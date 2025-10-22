@@ -8,8 +8,8 @@
 #include "hittable.h"
 #include "hittableList.h"
 #include "sphere.h"
-#include "camera.h"
-#include "input.h"
+#include "camera.hpp"
+#include "input.hpp"
 
 
 int main(int argc, char* argv[])

@@ -138,10 +138,10 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="camera.h" />
+    <ClInclude Include="camera.hpp" />
     <ClInclude Include="hittable.h" />
     <ClInclude Include="hittableList.h" />
-    <ClInclude Include="input.h" />
+    <ClInclude Include="input.hpp" />
     <ClInclude Include="interval.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="rtweekend.h" />

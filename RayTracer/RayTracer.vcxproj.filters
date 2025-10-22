@@ -41,10 +41,10 @@
     <ClInclude Include="interval.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="input.h">
+    <ClInclude Include="input.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="camera.h">
+    <ClInclude Include="camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
