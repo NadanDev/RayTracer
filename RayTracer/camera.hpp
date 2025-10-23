@@ -71,8 +71,8 @@ colour rayColour(const ray& r, int depth, const hittable& world)
 	hitRecord rec;
 	if (world.hit(r, interval(0.001, infinity), rec))
 	{
-		vec3 direction = randomOnHemisphere(rec.normal);
-		return 0.5 * rayColour(ray(rec.p, direction), depth - 1, world);
+		vec3 direction = rec.normal + randomUnitVector();
+		return 0.1 * rayColour(ray(rec.p, direction), depth - 1, world);
 	}
 
 	vec3 unitDirection = unitVector(r.direction());
@@ -97,6 +97,16 @@ ray getRay(int i, int j, const Camera& cam)
 	auto rayDirection = pixelSample - rayOrigin;
 
 	return ray(rayOrigin, rayDirection);
+}
+
+inline double linearToGamma(double linearComponent)
+{
+	if (linearComponent > 0)
+	{
+		return sqrt(linearComponent);
+	}
+
+	return 0;
 }
 
 void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
@@ -128,9 +138,9 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 			}
 
 			static const interval intensity(0.000, 0.999);
-			pixels[offset]     = int(256 * intensity.clamp(pixelColour.x()));
-			pixels[offset + 1] = int(256 * intensity.clamp(pixelColour.y()));
-			pixels[offset + 2] = int(256 * intensity.clamp(pixelColour.z()));
+			pixels[offset]     = int(256 * intensity.clamp(linearToGamma(pixelColour.x())));
+			pixels[offset + 1] = int(256 * intensity.clamp(linearToGamma(pixelColour.y())));
+			pixels[offset + 2] = int(256 * intensity.clamp(linearToGamma(pixelColour.z())));
 		}
 	}
 }

@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 	cam.moveSpeed = 3;
 	cam.enableCameraLook = false;
 	cam.enableAntialiasing = true;
-	cam.samplesPerPixel = 100;
+	cam.samplesPerPixel = 10;
 	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
 	cam.maxDepth = 50;
 	// Calculations for intial values

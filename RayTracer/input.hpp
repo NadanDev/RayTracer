@@ -36,8 +36,8 @@ void inputHandler(Camera& cam, const double deltaTime, const double sensitivity,
 	// Rotation
 	if (cam.enableCameraLook)
 	{
-		cam.cameraHorizontalRotation -= x * sensitivity * deltaTime;
-		cam.cameraVerticalRotation += y * sensitivity * deltaTime;
+		cam.cameraHorizontalRotation -= x * sensitivity * 0.01;;
+		cam.cameraVerticalRotation += y * sensitivity * 0.01;;
 	}
 
 	if (state[SDL_SCANCODE_ESCAPE])
