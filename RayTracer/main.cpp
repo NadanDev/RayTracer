@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 {
 	// Image Settings
 	auto aspectRatio = 16.0 / 9.0;
-	int imageWidth = 400;
+	int imageWidth = 1280;
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
 
 	auto materialGround = make_shared<lambertian>(colour(0.8, 0.8, 0.0));
 	auto materialCenter = make_shared<lambertian>(colour(0.1, 0.2, 0.5));
-	auto materialLeft = make_shared<metal>(colour(0.8, 0.8, 0.8));
-	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2));
+	auto materialLeft = make_shared<metal>(colour(0.8, 0.8, 0.8), 0.3);
+	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2), 1.0);
 
 	world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0, materialGround));
 	world.add(make_shared<sphere>(point3(0.0, 0.0, -1.2), 0.5, materialCenter));
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	cam.moveSpeed = 3;
 	cam.enableCameraLook = false;
 	cam.enableAntialiasing = true;
-	cam.samplesPerPixel = 10;
+	cam.samplesPerPixel = 1000;
 	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
 	cam.maxDepth = 50;
 	// Calculations for intial values
