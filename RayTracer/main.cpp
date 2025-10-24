@@ -27,8 +27,8 @@ int main(int argc, char* argv[])
 
 	auto materialGround = make_shared<lambertian>(colour(0.8, 0.8, 0.0));
 	auto materialCenter = make_shared<lambertian>(colour(0.1, 0.2, 0.5));
-	auto materialLeft = make_shared<metal>(colour(0.8, 0.8, 0.8), 0.3);
-	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2), 1.0);
+	auto materialLeft = make_shared<metal>(colour(0.8, 0.8, 0.8), 0.1);
+	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2), 0.3);
 
 	world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0, materialGround));
 	world.add(make_shared<sphere>(point3(0.0, 0.0, -1.2), 0.5, materialCenter));
@@ -37,14 +37,14 @@ int main(int argc, char* argv[])
 
 	Camera cam;
 	// Initial values (Changeable)
-	bool live = false;
+	cam.live = false;
 	cam.cameraCenter = point3(0, 0, 2);
 	cam.FOV = 45;
 	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
 	cam.enableCameraLook = false;
 	cam.enableAntialiasing = true;
-	cam.samplesPerPixel = 1000;
+	cam.samplesPerPixel = 50;
 	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
 	cam.maxDepth = 50;
 	// Calculations for intial values
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 				quit = true;
 			}
 		}
-	} while (!quit && live);
+	} while (!quit && cam.live);
 
 	cout << "Done!\n";
 

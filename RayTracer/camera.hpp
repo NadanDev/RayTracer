@@ -4,6 +4,8 @@
 
 struct Camera
 {
+	bool live = false;
+
 	// Camera Settings
 	point3 cameraCenter = point3(0, 0, 0);
 	double FOV = 0;
@@ -116,11 +118,11 @@ inline double linearToGamma(double linearComponent)
 	return 0;
 }
 
-void renderRows(const int startY, const int endY, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
+void renderRows(const int startX, const int endX, const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world, int threadID)
 {
-	for (int j = startY; j < endY; ++j)
+	for (int j = 0; j < imageHeight; ++j)
 	{
-		for (int i = 0; i < imageWidth; ++i)
+		for (int i = startX; i < endX; ++i)
 		{
 			int offset = (j * imageWidth + i) * 3;
 
@@ -150,22 +152,27 @@ void renderRows(const int startY, const int endY, const int imageWidth, const in
 			pixels[offset + 2] = int(256 * intensity.clamp(linearToGamma(pixelColour.z())));
 		}
 	}
+
+	if (!cam.live)
+	{
+		cout << startX / (double)imageWidth * 100 << "% to" << endX / (double)imageWidth * 100 << "% part of image complete! (Thread " << threadID << ")\n";
+	}
 }
 
 
 void renderFrame(const int imageWidth, const int imageHeight, vector<unsigned char>& pixels, const Camera& cam, const hittable& world)
 {
 	int numThreads = thread::hardware_concurrency();
-	int rowsPerThread = imageHeight / numThreads;
+	int colsPerThread = imageWidth / numThreads;
 
 	vector<thread> threads;
 
 	for (int i = 0; i < numThreads; ++i)
 	{
-		int startY = i * rowsPerThread;
-		int endY = (i == numThreads - 1) ? imageHeight : startY + rowsPerThread;
+		int startX = i * colsPerThread;
+		int endX = (i == numThreads - 1) ? imageWidth : startX + colsPerThread;
 
-		threads.emplace_back(renderRows, startY, endY, imageWidth, imageHeight, ref(pixels), cref(cam), cref(world));
+		threads.emplace_back(renderRows, startX, endX, imageWidth, imageHeight, ref(pixels), cref(cam), cref(world), i);
 	}
 
 	for (auto& thread : threads)
