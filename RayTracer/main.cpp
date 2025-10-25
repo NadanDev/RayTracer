@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 {
 	// Image Settings
 	auto aspectRatio = 16.0 / 9.0;
-	int imageWidth = 500;
+	int imageWidth = 1280;
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
@@ -25,33 +25,66 @@ int main(int argc, char* argv[])
 	// World
 	hittableList world;
 
-	auto materialGround = make_shared<lambertian>(colour(0.8, 0.8, 0.0));
-	auto materialCenter = make_shared<lambertian>(colour(0.1, 0.2, 0.5));
-	auto materialLeft = make_shared<dielectric>(1.50);
-	auto materialBubble = make_shared<dielectric>(1.00 / 1.50);
-	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2), 0.3);
+	auto groundMaterial = make_shared<lambertian>(colour(0.5, 0.5, 0.5));
+	world.add(make_shared<sphere>(point3(0, -1000, 0), 1000, groundMaterial));
 
-	world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0, materialGround));
-	world.add(make_shared<sphere>(point3(0.0, 0.0, -1.2), 0.5, materialCenter));
-	world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.5, materialLeft));
-	world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.4, materialBubble));
-	world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, materialRight));
+	for (int a = -11; a < 11; a++) {
+		for (int b = -11; b < 11; b++) {
+			auto choose_mat = randomDouble();
+			point3 center(a + 0.9 * randomDouble(), 0.2, b + 0.9 * randomDouble());
+
+			if ((center - point3(4, 0.2, 0)).length() > 0.9) {
+				shared_ptr<material> sphere_material;
+
+				if (choose_mat < 0.8) {
+					// diffuse
+					auto albedo = colour::random() * colour::random();
+					sphere_material = make_shared<lambertian>(albedo);
+					world.add(make_shared<sphere>(center, 0.2, sphere_material));
+				}
+				else if (choose_mat < 0.95) {
+					// metal
+					auto albedo = colour::random(0.5, 1);
+					auto fuzz = randomDouble(0, 0.5);
+					sphere_material = make_shared<metal>(albedo, fuzz);
+					world.add(make_shared<sphere>(center, 0.2, sphere_material));
+				}
+				else {
+					// glass
+					sphere_material = make_shared<dielectric>(1.5);
+					world.add(make_shared<sphere>(center, 0.2, sphere_material));
+				}
+			}
+		}
+	}
+
+	auto material1 = make_shared<dielectric>(1.5);
+	world.add(make_shared<sphere>(point3(0, 1, 0), 1.0, material1));
+
+	auto material2 = make_shared<lambertian>(colour(0.4, 0.2, 0.1));
+	world.add(make_shared<sphere>(point3(-4, 1, 0), 1.0, material2));
+
+	auto material3 = make_shared<metal>(colour(0.7, 0.6, 0.5), 0.0);
+	world.add(make_shared<sphere>(point3(4, 1, 0), 1.0, material3));
 
 	Camera cam;
 	// Initial values (Changeable)
 	cam.live = false;
-	cam.cameraCenter = point3(0, 0, 2);
+	cam.cameraCenter = point3(9, 1, 11);
 	cam.FOV = 45;
 	cam.sensitivity = 1;
 	cam.moveSpeed = 3;
 	cam.enableCameraLook = false;
 	cam.enableAntialiasing = true;
-	cam.samplesPerPixel = 50;
+	cam.samplesPerPixel = 500;
 	cam.pixelSamplesScale = 1.0 / cam.samplesPerPixel;
 	cam.maxDepth = 50;
 	// Calculations for intial values
 	cam.viewportHeight = tan(degreesToRadians(cam.FOV) / 2) * 2 * cam.focalLength;
 	cam.viewportWidth = cam.viewportHeight * (double(imageWidth) / imageHeight);
+
+	cam.cameraVerticalRotation = 0.3;
+	cam.cameraHorizontalRotation = 0.8;
 
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -60,7 +93,7 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN); // 720p window (render resolution lower)
+	SDL_Window* window = SDL_CreateWindow("Ray Tracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, SDL_WINDOW_SHOWN); // 720p window (render resolution set with imageWidth)
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, imageWidth, imageHeight);
 	SDL_SetRelativeMouseMode(SDL_TRUE); // Enable mouse control

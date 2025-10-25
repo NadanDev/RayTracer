@@ -151,6 +151,11 @@ void renderRows(const int startX, const int endX, const int imageWidth, const in
 			pixels[offset + 1] = int(256 * intensity.clamp(linearToGamma(pixelColour.y())));
 			pixels[offset + 2] = int(256 * intensity.clamp(linearToGamma(pixelColour.z())));
 		}
+
+		if (!cam.live)
+		{
+			cout << "Thread " << threadID << " " << j / (double)imageHeight * 100 << "% rows complete\n";
+		}
 	}
 
 	if (!cam.live)
