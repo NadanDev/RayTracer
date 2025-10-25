@@ -155,7 +155,7 @@ void renderRows(const int startX, const int endX, const int imageWidth, const in
 
 	if (!cam.live)
 	{
-		cout << startX / (double)imageWidth * 100 << "% to" << endX / (double)imageWidth * 100 << "% part of image complete! (Thread " << threadID << ")\n";
+		cout << startX / (double)imageWidth * 100 << "% to " << endX / (double)imageWidth * 100 << "% part of image complete! (Thread " << threadID << ")\n";
 	}
 }
 

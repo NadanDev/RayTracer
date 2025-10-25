@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 {
 	// Image Settings
 	auto aspectRatio = 16.0 / 9.0;
-	int imageWidth = 1280;
+	int imageWidth = 500;
 	// Image Height : Must be at least 1
 	int imageHeight = int(imageWidth / aspectRatio);
 	imageHeight = (imageHeight < 1) ? 1 : imageHeight;
@@ -27,12 +27,14 @@ int main(int argc, char* argv[])
 
 	auto materialGround = make_shared<lambertian>(colour(0.8, 0.8, 0.0));
 	auto materialCenter = make_shared<lambertian>(colour(0.1, 0.2, 0.5));
-	auto materialLeft = make_shared<metal>(colour(0.8, 0.8, 0.8), 0.1);
+	auto materialLeft = make_shared<dielectric>(1.50);
+	auto materialBubble = make_shared<dielectric>(1.00 / 1.50);
 	auto materialRight = make_shared<metal>(colour(0.8, 0.6, 0.2), 0.3);
 
 	world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0, materialGround));
 	world.add(make_shared<sphere>(point3(0.0, 0.0, -1.2), 0.5, materialCenter));
 	world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.5, materialLeft));
+	world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.4, materialBubble));
 	world.add(make_shared<sphere>(point3(1.0, 0.0, -1.0), 0.5, materialRight));
 
 	Camera cam;
